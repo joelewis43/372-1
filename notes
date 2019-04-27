@@ -1,0 +1,13 @@
+Chatserv
+ - starts on Host A
+ - Waits on a user defined Port for client
+ - Serve will receive 
+
+
+
+Chatclient
+ - Starts on Host B
+ - Asks user for handle (username) up to 10 characters
+ - Sends messages with handle prepended
+  - "Joe> Hi!"
+ - Client can quit by sending \quit
