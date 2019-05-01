@@ -35,46 +35,50 @@ def getMessage(handle):
 
 if __name__ == "__main__":
 
-   # get port number
-   serverPort = getPort()
-
-   # get handle
-   handle = getHandle()
-
-   # create TCP socket
-   serverSocket = socket(AF_INET, SOCK_STREAM)
-
-   # bind the port to the socket
-   serverSocket.bind(('', serverPort))
-
-   print("Chatroom open on port", serverPort)
-
-   # wait for tcp connection
-   serverSocket.listen(1)
-   connection, clientAddress = serverSocket.accept()
-
    while True:
 
-      # wait for message from client
-      clientMessage = connection.recv(2048)
+      # get port number
+      serverPort = getPort()
 
-      # client quits the chat room
-      if '\quit' in clientMessage:
-	 print("Other user has left the chat")
-	 break
+      # get handle
+      handle = "Server" #getHandle()
 
-      # print the clients message
-      print(clientMessage)
+      # create TCP socket
+      serverSocket = socket(AF_INET, SOCK_STREAM)
 
-      # get message from user
-      message = getMessage(handle)
+      # bind the port to the socket
+      serverSocket.bind(('', serverPort))
 
-      # server quits the chat
-      if '\quit' in message:
-	 connection.send(message)
-	 break
+      portString = "Chatroom open on port " + str(serverPort)
+      print(portString)
 
-      # send message to client
-      connection.send(message)
+      # wait for tcp connection
+      serverSocket.listen(1)
+      connection, clientAddress = serverSocket.accept()
 
-   connection.close()
+      while True:
+
+         # wait for message from client
+         clientMessage = connection.recv(2048)
+
+         # client quits the chat room
+         if '\quit' in clientMessage:
+            print("Other user has left the chat")
+            connection.close()
+            break
+
+         # print the clients message
+         print(clientMessage)
+
+         # get message from user
+         message = getMessage(handle)
+
+         # server quits the chat
+         if '\quit' in message:
+            connection.send(message)
+            print("You have left the chat")
+            connection.close()
+            break
+
+         # send message to client
+         connection.send(message)

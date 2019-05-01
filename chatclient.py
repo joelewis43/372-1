@@ -3,6 +3,10 @@
 
 from socket import *
 
+def getPort():
+   port = raw_input("What port would you like to contact: ")
+   return int(port)
+
 def getHandle():
    handle = "00000000000"
 
@@ -36,7 +40,7 @@ if __name__ == "__main__":
 
    # identify server address and port
    serverName = 'access.engr.oregonstate.edu'
-   serverPort = 54545
+   serverPort = getPort()
 
    # get user handle
    handle = getHandle()
@@ -52,8 +56,9 @@ if __name__ == "__main__":
       message = getMessage(handle)
 
       if '\quit' in message:
-	 clientSocket.send(message)
-	 break
+         clientSocket.send(message)
+         print("You have left the chat.")
+         break
 
       # send message to server
       clientSocket.send(message)
@@ -62,11 +67,11 @@ if __name__ == "__main__":
       serverMessage = clientSocket.recv(2048)
 
       if '\quit' in serverMessage:
-	 print("Other user has left the chat")
-	 break
+         print("Other user has left the chat.")
+         break
 
       print(serverMessage)
       
 
-   # clost the connection when user specified to quit
+   # close the connection when user specified to quit
    clientSocket.close()
