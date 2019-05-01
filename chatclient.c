@@ -4,15 +4,30 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h> 
 
-#define MAXSIZE 500
+#define MAXMSGSIZE 500
+
+void removeNewLine(char* string) {
+
+    int len = strlen(string);    // remove newline at the end
+    if (string[len-1] == '\n')
+        string[len-1] = '\0';
+
+}
 
 void getHandle(char* handle) {
 
-    int maxLen = 11;
-    memset(handle, '\0', maxLen);
+    int maxLen = 11;                // 10 characters and 1 newline
+    memset(handle, '\0', maxLen);   // clear the array
     printf("What is your handle (max 10 characters): ");
-    fgets(handle, maxLen, stdin);
+    fgets(handle, maxLen, stdin);   // read the user input
+    removeNewLine(handle);          // remove the newline
+
+    //add "> " to the handle
+    int len = strlen(handle);
+    handle[len] = '>';
+    handle[len+1] = ' ';
 
 }
 
@@ -38,64 +53,117 @@ int setup(char** argv, struct addrinfo* hints, struct addrinfo* res) {
     // connect to host
     connect(sockfd, res->ai_addr, res->ai_addrlen);
 
+    printf("\nStarting Chatroom ...\n\n");
+
+    freeaddrinfo(res);
+
     return sockfd;
 
 }
 
-void sendMsg(int sockfd) {
-    
-    char msg[500];
-    int len, bytes_sent;
+int checkQuit(char* msg) {
 
-    memset(msg, '\0', sizeof(msg));
+    // specifies quit keyword
+    char* quit = "\\quit";
 
-    strcpy(msg, "From C Client");
-
-    len = strlen(msg);
-
-    bytes_sent = send(sockfd, msg, len, 0);
+    // check if message contains "\quit"
+    if(strstr(msg, quit) != NULL) {
+        return 1;
+    }
+    return 0;
 }
 
-void recvMsg(int sockfd) {
+int sendMsg(int sockfd, char* handle) {
 
-    char buffer[MAXSIZE];
-    memset(buffer, '\0', MAXSIZE);
+    //allocate buffer
+    char* buffer = malloc( sizeof(char) * ( MAXMSGSIZE + 1 ));
+    char* temp = buffer;
 
-    printf("Test: %d\n", MAXSIZE);
+    // clear the message's memory
+    memset(buffer, '\0', sizeof(buffer));
 
-    int bytes_recv = recv(sockfd, buffer, MAXSIZE, 0);
-    buffer[bytes_recv] = '\0';
+    //copy the handle into the buffer and advance buffer pointer past handle
+    strcpy(buffer, handle);
+    buffer += strlen(handle);
 
-    printf("%s\n\n", buffer);
+    // get the user's message
+    int msgLen = MAXMSGSIZE - strlen(handle) + 1;
+    printf("%s", handle);
+    fgets(buffer, msgLen, stdin);           // write just beyond the handle
+    removeNewLine(buffer);                  // remove the newline placed by fgets
+    buffer = temp;                          // return buffer to front of array
 
+    //send the users message
+    int bytes_sent = send(sockfd, buffer, strlen(buffer), 0);
+
+    //check if user wants to quit
+    if (checkQuit(buffer)) {
+        printf("\nYou have left the chatroom.\n\n");
+        free(buffer);
+        return 0;
+    }
+
+    // free buffer
+    free(buffer);
+
+    // return OK
+    return 1;
+}
+
+int recvMsg(int sockfd) {
+    
+    char buffer[MAXMSGSIZE];
+
+    // clear the buffer
+    memset(buffer, '\0', sizeof(buffer));
+
+    // receive message into buffer
+    int bytes_recv = recv(sockfd, buffer, sizeof(buffer), 0);
+
+    // check if other user is quitting
+    if(checkQuit(buffer)) {
+        printf("\nThe server has left that chatroom.\n\n");
+        return 0;
+    }
+
+    // print the message
+    printf("%s\n", buffer);
+
+    // return OK
+    return 1;
 }
 
 int main(int argc, char** argv) {
 
-    int socketFD;                  // socket file descriptor
-    struct addrinfo hints;
-    struct addrinfo *res;          // will point to the results
+    int socketFD;                   // socket file descriptor
+    struct addrinfo hints;          // used for connecting to server
+    struct addrinfo *res;
 
-    //get the users handle
-    char handle[11];
+    //get the users handle (10 chars for handle, 2 for "> ")
+    char handle[12];
     getHandle(handle);
 
     //set up the TCP connection
     socketFD = setup(argv, &hints, res);
 
     // run on a while loop
+    int sendFlag = 1;
+    int recvFlag = 1;
+    while (recvFlag) {
 
-    // send message
-    sendMsg(socketFD);
+        // send message
+        sendFlag = sendMsg(socketFD, handle);
 
-    //receive message
-    recvMsg(socketFD);
+        // check if user quit
+        if (!sendFlag)
+            break;
+
+        //receive message
+        recvFlag = recvMsg(socketFD);
+    }
 
     //close the socket
     close(socketFD);
-
-    //free the space allocated for server address
-    freeaddrinfo(res);
 
     return 0;
 }

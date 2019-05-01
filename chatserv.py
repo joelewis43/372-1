@@ -77,7 +77,7 @@ if __name__ == "__main__":
          if '\quit' in message:
             connection.send(message)
             print("You have left the chat")
-            connection.close()
+            connection.close() # NOT WORKING
             break
 
          # send message to client
