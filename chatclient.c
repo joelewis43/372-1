@@ -8,29 +8,58 @@
 
 #define MAXMSGSIZE 500
 
+/*
+    Input:          a string
+    Output:         NA
+    Description:    Used to remove the newline from the end of a string
+                    Replaces newline with null terminator
+*/
 void removeNewLine(char* string) {
+    
+    // get the end of the string
+    int len = strlen(string) - 1;
 
-    int len = strlen(string);    // remove newline at the end
-    if (string[len-1] == '\n')
-        string[len-1] = '\0';
+    // check if last character is a newline
+    if (string[len] == '\n')
+        string[len] = '\0';
 
 }
 
-void getHandle(char* handle) {
+/*
+    Input:          NA
+    Output:         NA
+    Description:    Requests user input for their handle and returns
+                    character array of their input
+*/
+char* getHandle() {
 
-    int maxLen = 11;                // 10 characters and 1 newline
-    memset(handle, '\0', maxLen);   // clear the array
-    printf("What is your handle (max 10 characters): ");
-    fgets(handle, maxLen, stdin);   // read the user input
-    removeNewLine(handle);          // remove the newline
+    int length = 50;
+    char *handle = malloc(length * sizeof(char));
+    memset(handle, '\0', length);           // clear the array
+
+    do {
+        printf("What is your handle (max 10 characters): ");
+        fgets(handle, length, stdin);       // read the user input
+    } while (strlen(handle) > 11);
+
+    removeNewLine(handle);                  // remove the newline
 
     //add "> " to the handle
     int len = strlen(handle);
     handle[len] = '>';
     handle[len+1] = ' ';
 
+    return handle;
+
 }
 
+/*
+    Input:          input arguments (address and port number)
+                    hints struct
+                    response struct
+    Output:         socket id number
+    Description:    handles the creation of the TCP connection
+*/
 int setup(char** argv, struct addrinfo* hints, struct addrinfo* res) {
 
     int status;
@@ -42,12 +71,12 @@ int setup(char** argv, struct addrinfo* hints, struct addrinfo* res) {
     hints->ai_family = AF_UNSPEC;        // don't care IPv4 or IPv6
     hints->ai_socktype = SOCK_STREAM;    // TCP stream sockets
 
+    // attempt to find the host
     if ((status = getaddrinfo(argv[1], argv[2], hints, &res)) != 0) {
         fprintf(stderr, "GetAddrInfo error: %s\n", gai_strerror(status));
-        //exit 1;
     }
 
-    //get socket descriptor
+    // get socket descriptor
     int sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
     // connect to host
@@ -55,12 +84,18 @@ int setup(char** argv, struct addrinfo* hints, struct addrinfo* res) {
 
     printf("\nStarting Chatroom ...\n\n");
 
+    // free space allocated in the response object
     freeaddrinfo(res);
 
     return sockfd;
 
 }
 
+/*
+    Input:          input message
+    Output:         0 if quitting, 1 if not quiting
+    Description:    Check if the client or server would like to quit
+*/
 int checkQuit(char* msg) {
 
     // specifies quit keyword
@@ -73,6 +108,12 @@ int checkQuit(char* msg) {
     return 0;
 }
 
+/*
+    Input:          socket identification number
+                    users hande
+    Output:         int specifying quit status
+    Description:    gets user message and sends it over TCP socket
+*/
 int sendMsg(int sockfd, char* handle) {
 
     //allocate buffer
@@ -110,6 +151,11 @@ int sendMsg(int sockfd, char* handle) {
     return 1;
 }
 
+/*
+    Input:          Socket identification number
+    Output:         unt specifying quit status
+    Description:    reads server message from the socket and prints to client
+*/
 int recvMsg(int sockfd) {
     
     char buffer[MAXMSGSIZE];
@@ -133,6 +179,12 @@ int recvMsg(int sockfd) {
     return 1;
 }
 
+
+
+
+
+
+
 int main(int argc, char** argv) {
 
     int socketFD;                   // socket file descriptor
@@ -140,8 +192,7 @@ int main(int argc, char** argv) {
     struct addrinfo *res;
 
     //get the users handle (10 chars for handle, 2 for "> ")
-    char handle[12];
-    getHandle(handle);
+    char* handle = getHandle();
 
     //set up the TCP connection
     socketFD = setup(argv, &hints, res);
